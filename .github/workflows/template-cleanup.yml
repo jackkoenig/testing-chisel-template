@@ -1,0 +1,61 @@
+# Feel free to delete this file
+# Its contents are deleted by template setup$!
+# Workflow to cleanup projects created from this template
+# Adapted from workflow of the same name in https://github.com/JetBrains/intellij-platform-plugin-template
+# SPDX-License-Identifier: Apache-2.0
+
+name: Template Cleanup
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # Triggered on first push to repos created from the template
+  template-cleanup:
+    name: Template Cleanup
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    if: github.event.repository.name != 'chisel-template.g8'
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # These are needed to make ad-m/github-push-action work
+          # https://github.com/ad-m/github-push-action/tree/d91a481090679876dfc4178fef17f286781251df#example-workflow-file
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup Scala
+        uses: VirtusLab/scala-cli-setup@v1
+        with:
+          jvm: adoptium:11
+          apps: giter8
+
+      - name: Cleanup
+        run: |
+          # Prepare variables
+          NAME="${GITHUB_REPOSITORY##*/}"
+          ORG="$GITHUB_REPOSITORY_OWNER"
+
+          g8 file://$PWD --name=$NAME --organization=$ORG -o ../test
+          rm -rf *
+          mv ../test/* .
+
+          rm -rf \
+            .github/workflows/template-cleanup.yml \
+            LICENSE
+
+      - name: Commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Template cleanup"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          branch: main
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+# !$
